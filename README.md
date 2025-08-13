@@ -53,3 +53,4 @@ This will produce a JSON array like:
 ## Performance
 On my machine (.NET 9, Release), processed ~139,691 rows in ~125 ms (~1.12 million rows/sec) with warm OS cache and null output to.
 The same benchmark without warm OS cache and IO operations as usual is ~140ms (~1.0 million rows/sec).
+<img width="1963" height="583" alt="Benchmark" src="https://github.com/user-attachments/assets/358595a0-3591-4b54-bda5-7e674f8f7032" />
