@@ -1,0 +1,77 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: .NET info
+        run: dotnet --info
+
+      # Find test projects and fail clearly if none are found
+      - name: Discover test projects
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t TESTS < <(git ls-files '**/*Tests.csproj' '**/*.Tests.csproj' '**/*Test.csproj' '**/*.Test.csproj' | sort -u)
+          if [ ${#TESTS[@]} -eq 0 ]; then
+            echo "❌ No test projects found. Expected patterns: *Tests.csproj, *.Tests.csproj, *Test.csproj, *.Test.csproj"
+            exit 1
+          fi
+          printf '%s\n' "${TESTS[@]}"
+          printf 'projects=%s\n' "$(printf '%q ' "${TESTS[@]}")" >> "$GITHUB_OUTPUT"
+
+      - name: Restore (tests only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for p in ${{ steps.discover.outputs.projects }}; do
+            echo "🔧 restore: $p"
+            dotnet restore "$p"
+          done
+
+      - name: Build (tests only, Release)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for p in ${{ steps.discover.outputs.projects }}; do
+            echo "🧱 build: $p"
+            dotnet build "$p" -c Release --no-restore
+          done
+
+      - name: Test (Release)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p TestResults
+          for p in ${{ steps.discover.outputs.projects }}; do
+            echo "✅ test: $p"
+            dotnet test "$p" -c Release --no-build \
+              --logger "trx;LogFileName=$(basename "$p").trx" \
+              --results-directory TestResults
+          done
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults
