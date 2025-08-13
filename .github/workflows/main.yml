@@ -1,16 +1,12 @@
-name: Tests
+name: CI
 
 on:
   push:
   pull_request:
 
 jobs:
-  test:
+  build-test:
     runs-on: ubuntu-latest
-
-    env:
-      DOTNET_NOLOGO: true
-      DOTNET_CLI_TELEMETRY_OPTOUT: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -20,15 +16,15 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
-      - name: Restore (tests only)
-        run: dotnet restore CSVToJSONConverter.Test/CSVToJSONConverter.Test.csproj
+      - name: Restore
+        run: dotnet restore CSVToJSONConverter.sln
 
-      - name: Build tests (Release, no Main)
-        run: dotnet build CSVToJSONConverter.Test/CSVToJSONConverter.Test.csproj -c Release --no-restore -p:OutputType=Library
+      - name: Build (Release)
+        run: dotnet build CSVToJSONConverter.sln -c Release --no-restore
 
       - name: Test (Release)
         run: >
-          dotnet test CSVToJSONConverter.Test/CSVToJSONConverter.Test.csproj
+          dotnet test CSVToJSONConverter.sln
           -c Release
           --no-build
           --logger "trx;LogFileName=test_results.trx"
